@@ -1,75 +1,271 @@
 {% extends 'myapp/base.html' %}
+{% load static custom_tags %}
 
 {% block title %}Teacher Dashboard{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'myapp/css/teacher_dashboard.css' %}">
+{% endblock %}
+
 {% block content %}
-<!-- Welcome Section -->
-<div class="row mt-4 mb-4">
-    <div class="col-12">
-        <div class="p-5 text-white bg-primary rounded-3 shadow-sm">
-            <h2 class="fw-bold">Welcome back, Professor {{ user.last_name|default:user.username }}!</h2>
-            <p class="lead mb-0">Here is an overview of the classes you are teaching this term.</p>
-        </div>
+<div class="d-flex" id="dashboard-wrapper">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <i data-lucide="graduation-cap" class="lucide-sm"></i>
+      </div>
+      <div>
+        <div class="brand-name">UniPortal</div>
+        <div class="brand-sub">Teacher Panel</div>
+      </div>
     </div>
+
+    <div class="nav-section">Main</div>
+
+    <a href="{% url 'teacher_dashboard' %}" class="nav-item-link active">
+      <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard
+    </a>
+    <a href="#" class="nav-item-link">
+      <span class="nav-icon"><i data-lucide="users"></i></span> Manage Roster
+    </a>
+    <a href="#" class="nav-item-link">
+      <span class="nav-icon"><i data-lucide="clipboard-list"></i></span> Gradebook
+    </a>
+
+    <div class="nav-section">Usage</div>
+    <button id="dark-mode-toggle" class="nav-item-link" type="button" onclick="toggleDarkMode()">
+      <span class="nav-icon"><i data-lucide="moon" id="theme-icon-moon"></i><i data-lucide="sun" id="theme-icon-sun" style="display:none"></i></span>
+      <span id="theme-label">Dark Mode</span>
+    </button>
+    <a href="/logout-confirm/" class="nav-item-link">
+      <span class="nav-icon"><i data-lucide="log-out"></i></span> Log Out
+    </a>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div id="page-content" class="flex-grow-1">
+
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+      <div class="d-flex align-items-center gap-4">
+        <div class="hero-avatar">
+          <i data-lucide="user" style="width:32px;height:32px"></i>
+        </div>
+        <div style="z-index:1">
+          <h2>Welcome back, Professor {{ user.last_name|default:user.username }}!</h2>
+          <p>Here is an overview of your classes for this term.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-4 mb-4">
+      <div class="col-sm-6 col-lg-4">
+        <div class="stat-card stat-purple shadow-sm">
+          <div class="stat-icon">
+            <i data-lucide="book-open"></i>
+          </div>
+          <div class="stat-value">{{ classes|length }}</div>
+          <div class="stat-label">Classes Assigned</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="stat-card stat-blue shadow-sm">
+          <div class="stat-icon">
+            <i data-lucide="users"></i>
+          </div>
+          <div class="stat-value">{{ classes|sum_attr:"student_count" }}</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="stat-card stat-green shadow-sm">
+          <div class="stat-icon">
+            <i data-lucide="calendar"></i>
+          </div>
+          <div class="stat-value" style="font-size:1.4rem">
+            {% with first_class=classes|first %}{{ first_class.term.name|default:"N/A" }}{% endwith %}
+          </div>
+          <div class="stat-label">Current Term</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enrollment Chart -->
+    <div class="chart-card shadow-sm mb-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <div class="chart-title">Student Enrollment per Class</div>
+          <div class="chart-sub">Students currently enrolled in each of your classes</div>
+        </div>
+        <div class="chart-icon-wrap">
+          <i data-lucide="bar-chart-3"></i>
+        </div>
+      </div>
+      <canvas id="enrollmentChart" height="80"></canvas>
+    </div>
+
+    <!-- Class Cards Grid -->
+    <div class="section-header">
+      <h5>My Assigned Classes</h5>
+      <span class="section-badge">{{ classes|length }} Classes</span>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-5">
+      {% for class in classes %}
+      <div class="col">
+        <div class="class-card h-100">
+          <div class="card-accent"></div>
+          <div class="card-header-custom">
+            <div class="subject-name">{{ class.subject.name }}</div>
+            <div class="subject-code">{{ class.term.name }}</div>
+          </div>
+          <div class="card-body">
+            <div class="info-row">
+              <div class="info-icon">
+                <i data-lucide="calendar-days"></i>
+              </div>
+              <div>
+                <div class="info-label">Term</div>
+                <div class="info-value">{{ class.term.name }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon">
+                <i data-lucide="map-pin"></i>
+              </div>
+              <div>
+                <div class="info-label">Room</div>
+                <div class="info-value">{{ class.room_number|default:"TBD" }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon">
+                <i data-lucide="users"></i>
+              </div>
+              <div>
+                <div class="info-label">Students Enrolled</div>
+                <div class="info-value">{{ class.student_count }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon">
+                <i data-lucide="award"></i>
+              </div>
+              <div>
+                <div class="info-label">Credits</div>
+                <div class="info-value">{{ class.subject.credits }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer-custom">
+            <a href="#" class="btn btn-manage">
+              Manage Roster &amp; Grades
+              <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:6px"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="inbox"></i>
+          </div>
+          <h5>No classes assigned yet</h5>
+          <p>You currently have no classes assigned for this term. Please contact administration if this is an error.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
 </div>
 
-<!-- Classes Grid -->
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold text-secondary m-0">My Assigned Classes</h4>
-        <span class="badge bg-secondary rounded-pill fs-6">{{ classes|length }} Classes</span>
-    </div>
-</div>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>lucide.createIcons();</script>
 
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-5">
-    {% for class in classes %}
-    <div class="col">
-        <div class="card h-100 shadow-sm border-0 class-card transition-hover">
-            <div class="card-header bg-dark text-white border-0 py-3">
-                <h5 class="card-title mb-0 fw-bold">{{ class.subject.name }}</h5>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-4">
-                    <li class="mb-2">
-                        <strong><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar-event me-2 text-primary" viewBox="0 0 16 16"><path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>Term:</strong> {{ class.term.name }}
-                    </li>
-                    <li class="mb-2">
-                        <strong><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-geo-alt me-2 text-primary" viewBox="0 0 16 16"><path d="M12.166 8.94c-.524 1.062-1.234 2.12-1.96 3.07A31.493 31.493 0 0 1 8 14.58a31.481 31.481 0 0 1-2.206-2.57c-.726-.95-1.436-2.008-1.96-3.07C3.304 7.867 3 6.862 3 6a5 5 0 0 1 10 0c0 .862-.305 1.867-.834 2.94zM8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10z"/><path d="M8 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>Room:</strong> {{ class.room_number|default:"TBD" }}
-                    </li>
-                    <li class="mb-2">
-                        <strong><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people me-2 text-primary" viewBox="0 0 16 16"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816zM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>Credits:</strong> {{ class.subject.credits }}
-                    </li>
-                    <li class="mb-2">
-                        <strong><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-badge me-2 text-primary" viewBox="0 0 16 16"><path d="M6.5 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M4.5 0A2.5 2.5 0 0 0 2 2.5V14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2.5A2.5 2.5 0 0 0 11.5 0h-7zM3 2.5A1.5 1.5 0 0 1 4.5 1h7A1.5 1.5 0 0 1 13 2.5v10.795a4.2 4.2 0 0 0-.776-.492C11.392 12.387 10.063 12 8 12s-3.392.387-4.224.803a4.2 4.2 0 0 0-.776.492V2.5z"/></svg>Students:</strong> {{ class.student_count }} enrolled
-                    </li>
-                </ul>
-            </div>
-            <div class="card-footer bg-white border-top-0 pb-4 pt-0">
-                <div class="d-grid gap-2">
-                    <!-- We will wire this link up next! -->
-                    <a href="#" class="btn btn-outline-primary btn-sm rounded-pill fw-bold">Manage Roster & Grades</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="alert alert-info border-0 shadow-sm" role="alert">
-            <h4 class="alert-heading">No classes assigned yet.</h4>
-            <p>You currently do not have any classes assigned to you for this term. Please contact the administration if you believe this is an error.</p>
-        </div>
-    </div>
-    {% endfor %}
-</div>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function() {
+  const labels = [{% for c in classes %}"{{ c.subject.name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const data   = [{% for c in classes %}{{ c.student_count }}{% if not forloop.last %},{% endif %}{% endfor %}];
 
-<!-- Quick styling to make the cards lift on hover -->
-<style>
-    .transition-hover {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+  if (labels.length === 0) return;
+
+  const ctx = document.getElementById('enrollmentChart');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Students Enrolled',
+        data: data,
+        backgroundColor: 'rgba(0, 119, 182, 0.15)',
+        borderColor: '#0077b6',
+        borderWidth: 2,
+        borderRadius: 10,
+        borderSkipped: false,
+        hoverBackgroundColor: 'rgba(0, 119, 182, 0.3)',
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 800, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#03045e',
+          titleFont: { weight: '600' },
+          cornerRadius: 8,
+          padding: 10,
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.y} students`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+          ticks: { precision: 0, color: '#94a3b8', font: { size: 12 } },
+          border: { display: false }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#64748b', font: { size: 12 } },
+          border: { display: false }
+        }
+      }
     }
-    .transition-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-    }
-</style>
+  });
+})();
+</script>
+
+<!-- Dark Mode Toggle -->
+<script>
+function toggleDarkMode() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  updateToggleUI(!isDark);
+}
+
+function updateToggleUI(isDark) {
+  document.getElementById('theme-icon-moon').style.display = isDark ? 'none' : '';
+  document.getElementById('theme-icon-sun').style.display  = isDark ? '' : 'none';
+  document.getElementById('theme-label').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+}
+
+(function() {
+  const saved = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateToggleUI(saved === 'dark');
+})();
+</script>
 {% endblock %}
