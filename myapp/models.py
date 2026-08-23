@@ -46,12 +46,20 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} {str(self.student_id)}"
 
+class Room(models.Model):
+    name = models.CharField(max_length=100)
+    building = models.CharField(max_length=255)
+    campus = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.name} - {self.building} ({self.campus})"
+
 class Class(models.Model):
     class_id = models.TextField()
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     term = models.ForeignKey(Term, on_delete=models.CASCADE)
-    room_number = models.CharField(max_length=100, blank=True)
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.subject.name} - {self.term.name}"

@@ -21,7 +21,7 @@ def index(request):
 def teacher_dashboard(request):
     try:
         # Get the classes assigned to the logged-in teacher and count enrollments
-        classes = request.user.teacher.class_set.select_related('subject', 'term').annotate(
+        classes = request.user.teacher.class_set.select_related('subject', 'term', 'room').annotate(
             student_count=Count('enrollment')
         ).all()
     except AttributeError:
