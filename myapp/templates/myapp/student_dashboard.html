@@ -2,17 +2,136 @@
 
 {% block title %}Student Dashboard{% endblock %}
 
+{% block active_student_dashboard %}active{% endblock %}
+
 {% block content %}
-<div class="row mt-4">
-    <div class="col-12">
-        <h2 class="mb-4">Welcome, Student {{ user.get_full_name|default:user.username }}</h2>
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">My Enrollments</h5>
-                <p class="text-muted">The classes you are enrolled in will appear here.</p>
-                <!-- We will list the enrollments here soon! -->
-            </div>
-        </div>
+<!-- Hero Banner -->
+<div class="hero-banner">
+  <div class="d-flex align-items-center gap-4">
+    <div class="hero-avatar">
+      <i data-lucide="user" style="width:32px;height:32px"></i>
     </div>
+    <div style="z-index:1">
+      <h2>Welcome, {{ user.get_full_name|default:user.username }}!</h2>
+      <p>Here is an overview of your enrolled classes and academic status.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat-card stat-purple shadow-sm">
+      <div class="stat-icon">
+        <i data-lucide="book-open"></i>
+      </div>
+      <div class="stat-value">{{ enrollments|length }}</div>
+      <div class="stat-label">Classes Enrolled</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat-card stat-blue shadow-sm">
+      <div class="stat-icon">
+        <i data-lucide="award"></i>
+      </div>
+      <div class="stat-value">{{ total_credits }}</div>
+      <div class="stat-label">Total Credits</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat-card stat-green shadow-sm">
+      <div class="stat-icon">
+        <i data-lucide="calendar"></i>
+      </div>
+      <div class="stat-value" style="font-size:1.4rem">
+        {{ current_term.name|default:"N/A" }}
+        {% if current_term.start_date and current_term.end_date %}
+          <span class="d-block" style="font-size: 11px; font-weight: 500; margin-top: 4px; color: var(--text-muted);">
+            {{ current_term.start_date|date:"M d, Y" }} - {{ current_term.end_date|date:"M d, Y" }}
+          </span>
+        {% endif %}
+      </div>
+      <div class="stat-label">Current Term</div>
+    </div>
+  </div>
+</div>
+
+<!-- Class Cards Grid -->
+<div class="section-header">
+  <h5>My Enrollments</h5>
+  <span class="section-badge">{{ enrollments|length }} Classes</span>
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-5">
+  {% for enrollment in enrollments %}
+  <div class="col">
+    <div class="class-card h-100">
+      <div class="card-accent"></div>
+      <div class="card-header-custom">
+        <div class="subject-name">{{ enrollment.class_instance.subject.name }}</div>
+        <div class="subject-code">Teacher name: {{ enrollment.class_instance.teacher }}</div>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="calendar-days"></i>
+          </div>
+          <div>
+            <div class="info-label">Term</div>
+            <div class="info-value">{{ enrollment.class_instance.term.name }}</div>
+            {% if enrollment.class_instance.term.start_date and enrollment.class_instance.term.end_date %}
+              <div style="font-size: 11px; margin-top: 1px; color: var(--text-muted);">
+                {{ enrollment.class_instance.term.start_date|date:"M d, Y" }} - {{ enrollment.class_instance.term.end_date|date:"M d, Y" }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="map-pin"></i>
+          </div>
+          <div>
+            <div class="info-label">Room</div>
+            <div class="info-value">
+              {% if enrollment.class_instance.room %}
+                {{ enrollment.class_instance.room.name }} <span style="font-size: 11px; color: var(--text-muted);">({{ enrollment.class_instance.room.building }})</span>
+              {% else %}
+                TBD
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="award"></i>
+          </div>
+          <div>
+            <div class="info-label">Credits</div>
+            <div class="info-value">{{ enrollment.class_instance.subject.credits }}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="bookmark"></i>
+          </div>
+          <div>
+            <div class="info-label">Final Grade</div>
+            <div class="info-value text-success font-weight-bold">{{ enrollment.final_grade }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i data-lucide="inbox"></i>
+      </div>
+      <h5>No active enrollments</h5>
+      <p>You currently are not enrolled in any classes for this term. Please contact the administration or registrar to register.</p>
+    </div>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}

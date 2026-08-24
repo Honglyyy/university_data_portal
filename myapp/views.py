@@ -1,8 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django.db.models import Count
+from django.db.models import Count, Model
 
-from myapp.models import Teacher, Class
+from myapp.models import Teacher, Class, Student
+
 
 @login_required(login_url='/login')
 def index(request):
@@ -36,4 +37,29 @@ def teacher_dashboard(request):
 
 @login_required(login_url='/login')
 def student_dashboard(request):
-    return render(request, 'myapp/student_dashboard.html')
+    try:
+        # Get the enrollments for the logged-in student
+        enrollments = request.user.student.enrollment_set.select_related(
+            'class_instance__subject',
+            'class_instance__term',
+            'class_instance__room',
+            'class_instance__teacher'
+        ).all()
+        
+        # Calculate total credits
+        total_credits = sum(e.class_instance.subject.credits for e in enrollments)
+        
+        # Get current term from the first enrollment if available
+        first_enrollment = enrollments.first()
+        current_term = first_enrollment.class_instance.term if first_enrollment else None
+    except AttributeError:
+        enrollments = []
+        total_credits = 0
+        current_term = None
+
+    context = {
+        'enrollments': enrollments,
+        'total_credits': total_credits,
+        'current_term': current_term,
+    }
+    return render(request, 'myapp/student_dashboard.html', context)

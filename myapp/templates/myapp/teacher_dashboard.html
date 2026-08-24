@@ -3,196 +3,160 @@
 
 {% block title %}Teacher Dashboard{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'myapp/css/teacher_dashboard.css' %}">
-{% endblock %}
+{% block active_teacher_dashboard %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex" id="dashboard-wrapper">
-
-  <!-- SIDEBAR -->
-  <nav id="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">
-        <i data-lucide="graduation-cap" class="lucide-sm"></i>
-      </div>
-      <div>
-        <div class="brand-name">UniPortal</div>
-        <div class="brand-sub">Teacher Panel</div>
-      </div>
+<!-- Hero Banner -->
+<div class="hero-banner">
+  <div class="d-flex align-items-center gap-4">
+    <div class="hero-avatar">
+      <i data-lucide="user" style="width:32px;height:32px"></i>
     </div>
-
-    <div class="nav-section">Main</div>
-
-    <a href="{% url 'teacher_dashboard' %}" class="nav-item-link active">
-      <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard
-    </a>
-    <a href="#" class="nav-item-link">
-      <span class="nav-icon"><i data-lucide="users"></i></span> Manage Roster
-    </a>
-    <a href="#" class="nav-item-link">
-      <span class="nav-icon"><i data-lucide="clipboard-list"></i></span> Gradebook
-    </a>
-
-    <div class="nav-section">Usage</div>
-    <button id="dark-mode-toggle" class="nav-item-link" type="button" onclick="toggleDarkMode()">
-      <span class="nav-icon"><i data-lucide="moon" id="theme-icon-moon"></i><i data-lucide="sun" id="theme-icon-sun" style="display:none"></i></span>
-      <span id="theme-label">Dark Mode</span>
-    </button>
-    <a href="/logout-confirm/" class="nav-item-link">
-      <span class="nav-icon"><i data-lucide="log-out"></i></span> Log Out
-    </a>
-  </nav>
-
-  <!-- MAIN CONTENT -->
-  <div id="page-content" class="flex-grow-1">
-
-    <!-- Hero Banner -->
-    <div class="hero-banner">
-      <div class="d-flex align-items-center gap-4">
-        <div class="hero-avatar">
-          <i data-lucide="user" style="width:32px;height:32px"></i>
-        </div>
-        <div style="z-index:1">
-          <h2>Welcome back, Professor {{ user.last_name|default:user.username }}!</h2>
-          <p>Here is an overview of your classes for this term.</p>
-        </div>
-      </div>
+    <div style="z-index:1">
+      <h2>Welcome back, Professor {{ user.last_name|default:user.username }}!</h2>
+      <p>Here is an overview of your classes for this term.</p>
     </div>
-
-    <!-- Stat Cards -->
-    <div class="row g-4 mb-4">
-      <div class="col-sm-6 col-lg-4">
-        <div class="stat-card stat-purple shadow-sm">
-          <div class="stat-icon">
-            <i data-lucide="book-open"></i>
-          </div>
-          <div class="stat-value">{{ classes|length }}</div>
-          <div class="stat-label">Classes Assigned</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-lg-4">
-        <div class="stat-card stat-blue shadow-sm">
-          <div class="stat-icon">
-            <i data-lucide="users"></i>
-          </div>
-          <div class="stat-value">{{ classes|sum_attr:"student_count" }}</div>
-          <div class="stat-label">Total Students</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-lg-4">
-        <div class="stat-card stat-green shadow-sm">
-          <div class="stat-icon">
-            <i data-lucide="calendar"></i>
-          </div>
-          <div class="stat-value" style="font-size:1.4rem">
-            {% with first_class=classes|first %}{{ first_class.term.name|default:"N/A" }}{% endwith %}
-          </div>
-          <div class="stat-label">Current Term</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Enrollment Chart -->
-    <div class="chart-card shadow-sm mb-4">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-          <div class="chart-title">Student Enrollment per Class</div>
-          <div class="chart-sub">Students currently enrolled in each of your classes</div>
-        </div>
-        <div class="chart-icon-wrap">
-          <i data-lucide="bar-chart-3"></i>
-        </div>
-      </div>
-      <canvas id="enrollmentChart" height="80"></canvas>
-    </div>
-
-    <!-- Class Cards Grid -->
-    <div class="section-header">
-      <h5>My Assigned Classes</h5>
-      <span class="section-badge">{{ classes|length }} Classes</span>
-    </div>
-
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-5">
-      {% for class in classes %}
-      <div class="col">
-        <div class="class-card h-100">
-          <div class="card-accent"></div>
-          <div class="card-header-custom">
-            <div class="subject-name">{{ class.subject.name }}</div>
-            <div class="subject-code">{{ class.term.name }}</div>
-          </div>
-          <div class="card-body">
-            <div class="info-row">
-              <div class="info-icon">
-                <i data-lucide="calendar-days"></i>
-              </div>
-              <div>
-                <div class="info-label">Term</div>
-                <div class="info-value">{{ class.term.name }}</div>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-icon">
-                <i data-lucide="map-pin"></i>
-              </div>
-              <div>
-                <div class="info-label">Room</div>
-                <div class="info-value">
-                  {% if class.room %}
-                    {{ class.room.name }} <span class="text-muted" style="font-size: 11px;">({{ class.room.building }}, {{ class.room.campus }})</span>
-                  {% else %}
-                    TBD
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-icon">
-                <i data-lucide="users"></i>
-              </div>
-              <div>
-                <div class="info-label">Students Enrolled</div>
-                <div class="info-value">{{ class.student_count }}</div>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-icon">
-                <i data-lucide="award"></i>
-              </div>
-              <div>
-                <div class="info-label">Credits</div>
-                <div class="info-value">{{ class.subject.credits }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="card-footer-custom">
-            <a href="#" class="btn btn-manage">
-              Manage Roster &amp; Grades
-              <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:6px"></i>
-            </a>
-          </div>
-        </div>
-      </div>
-      {% empty %}
-      <div class="col-12">
-        <div class="empty-state">
-          <div class="empty-icon">
-            <i data-lucide="inbox"></i>
-          </div>
-          <h5>No classes assigned yet</h5>
-          <p>You currently have no classes assigned for this term. Please contact administration if this is an error.</p>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
   </div>
 </div>
 
-<!-- Lucide Icons -->
-<script src="https://unpkg.com/lucide@latest"></script>
-<script>lucide.createIcons();</script>
+<!-- Stat Cards -->
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat-card stat-purple shadow-sm">
+      <div class="stat-icon">
+        <i data-lucide="book-open"></i>
+      </div>
+      <div class="stat-value">{{ classes|length }}</div>
+      <div class="stat-label">Classes Assigned</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat-card stat-blue shadow-sm">
+      <div class="stat-icon">
+        <i data-lucide="users"></i>
+      </div>
+      <div class="stat-value">{{ classes|sum_attr:"student_count" }}</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat-card stat-green shadow-sm">
+      <div class="stat-icon">
+        <i data-lucide="calendar"></i>
+      </div>
+      <div class="stat-value" style="font-size:1.4rem">
+        {% with first_class=classes|first %}
+          {{ first_class.term.name|default:"N/A" }}
+          {% if first_class.term.start_date and first_class.term.end_date %}
+            <span class="d-block" style="font-size: 11px; font-weight: 500; margin-top: 4px; color: var(--text-muted);">
+              {{ first_class.term.start_date|date:"M d, Y" }} - {{ first_class.term.end_date|date:"M d, Y" }}
+            </span>
+          {% endif %}
+        {% endwith %}
+      </div>
+      <div class="stat-label">Current Term</div>
+    </div>
+  </div>
+</div>
+
+<!-- Enrollment Chart -->
+<div class="chart-card shadow-sm mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <div class="chart-title">Student Enrollment per Class</div>
+      <div class="chart-sub">Students currently enrolled in each of your classes</div>
+    </div>
+    <div class="chart-icon-wrap">
+      <i data-lucide="bar-chart-3"></i>
+    </div>
+  </div>
+  <canvas id="enrollmentChart" height="80"></canvas>
+</div>
+
+<!-- Class Cards Grid -->
+<div class="section-header">
+  <h5>My Assigned Classes</h5>
+  <span class="section-badge">{{ classes|length }} Classes</span>
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-5">
+  {% for class in classes %}
+  <div class="col">
+    <div class="class-card h-100">
+      <div class="card-accent"></div>
+      <div class="card-header-custom">
+        <div class="subject-name">{{ class.subject.name }}</div>
+        <div class="subject-code">{{ class.term.name }}</div>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="calendar-days"></i>
+          </div>
+          <div>
+            <div class="info-label">Term</div>
+            <div class="info-value">{{ class.term.name }}</div>
+            {% if class.term.start_date and class.term.end_date %}
+              <div style="font-size: 11px; margin-top: 1px; color: var(--text-muted);">
+                {{ class.term.start_date|date:"M d, Y" }} - {{ class.term.end_date|date:"M d, Y" }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="map-pin"></i>
+          </div>
+          <div>
+            <div class="info-label">Room</div>
+            <div class="info-value">
+              {% if class.room %}
+                {{ class.room.name }} <span style="font-size: 11px; color: var(--text-muted);">({{ class.room.building }}, {{ class.room.campus }})</span>
+              {% else %}
+                TBD
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="users"></i>
+          </div>
+          <div>
+            <div class="info-label">Students Enrolled</div>
+            <div class="info-value">{{ class.student_count }}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="award"></i>
+          </div>
+          <div>
+            <div class="info-label">Credits</div>
+            <div class="info-value">{{ class.subject.credits }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer-custom">
+        <a href="#" class="btn btn-manage">
+          Manage Roster &amp; Grades
+          <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:6px"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i data-lucide="inbox"></i>
+      </div>
+      <h5>No classes assigned yet</h5>
+      <p>You currently have no classes assigned for this term. Please contact administration if this is an error.</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -249,29 +213,6 @@
       }
     }
   });
-})();
-</script>
-
-<!-- Dark Mode Toggle -->
-<script>
-function toggleDarkMode() {
-  const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  localStorage.setItem('theme', isDark ? 'light' : 'dark');
-  updateToggleUI(!isDark);
-}
-
-function updateToggleUI(isDark) {
-  document.getElementById('theme-icon-moon').style.display = isDark ? 'none' : '';
-  document.getElementById('theme-icon-sun').style.display  = isDark ? '' : 'none';
-  document.getElementById('theme-label').textContent = isDark ? 'Light Mode' : 'Dark Mode';
-}
-
-(function() {
-  const saved = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', saved);
-  updateToggleUI(saved === 'dark');
 })();
 </script>
 {% endblock %}
