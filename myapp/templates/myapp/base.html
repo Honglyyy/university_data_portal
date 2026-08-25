@@ -53,8 +53,14 @@
             <span class="nav-icon"><i data-lucide="clipboard-list"></i></span> Gradebook
           </a>
         {% elif user.student %}
+          <a href="{% url 'student_major' %}" class="nav-item-link {% block active_student_major %}{% endblock %}">
+            <span class="nav-icon"><i data-lucide="graduation-cap"></i></span> My Major
+          </a>
           <a href="{% url 'student_dashboard' %}" class="nav-item-link {% block active_student_dashboard %}{% endblock %}">
-            <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard
+            <span class="nav-icon"><i data-lucide="book-open"></i></span> My Courses
+          </a>
+          <a href="{% url 'student_grades' %}" class="nav-item-link {% block active_student_grades %}{% endblock %}">
+            <span class="nav-icon"><i data-lucide="award"></i></span> My Grades
           </a>
         {% endif %}
 

@@ -1,0 +1,363 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}My Grades{% endblock %}
+
+{% block active_student_grades %}active{% endblock %}
+
+{% block content %}
+<div class="section-header mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <div class="hero-avatar" style="width: 48px; height: 48px;">
+      <i data-lucide="award" style="width:24px;height:24px"></i>
+    </div>
+    <div>
+      <h2 style="font-size: 1.5rem; margin-bottom: 2px;">My Grades</h2>
+      <p style="color: var(--text-muted); margin: 0; font-size: 14px;">View your academic progress and GPA.</p>
+    </div>
+  </div>
+</div>
+
+{% if terms_data|length > 0 %}
+<div class="row mb-4 g-4">
+  <!-- GPA Comparison Chart -->
+  <div class="col-md-6">
+    <div class="chart-card shadow-sm h-100 d-flex flex-column">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <div class="chart-title">Yearly GPA Comparison</div>
+          <div class="chart-sub">Comparing your GPA across different years</div>
+        </div>
+        <div class="chart-icon-wrap">
+          <i data-lucide="bar-chart-2"></i>
+        </div>
+      </div>
+      <div style="position: relative; height: 250px; width: 100%; flex-grow: 1;">
+        <canvas id="gpaChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Course Scores Chart -->
+  <div class="col-md-6">
+    <div class="chart-card shadow-sm h-100 d-flex flex-column">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <div class="chart-title">Course Final Scores</div>
+          <div class="chart-sub">Your final scores for each course</div>
+        </div>
+        <div class="chart-icon-wrap">
+          <i data-lucide="bar-chart"></i>
+        </div>
+      </div>
+      <div style="position: relative; height: 250px; width: 100%; flex-grow: 1;">
+        <canvas id="scoresChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% for term_data in terms_data %}
+<h6 class="mt-4 mb-3" style="color: var(--text-primary); font-weight: 600;">
+  {{ term_data.term.name }}
+  {% if term_data.term.start_date and term_data.term.end_date %}
+    <span class="text-muted fw-normal ms-2" style="font-size: 13px;">
+      ({{ term_data.term.start_date|date:"M d, Y" }} - {{ term_data.term.end_date|date:"M d, Y" }})
+    </span>
+  {% endif %}
+</h6>
+<div class="card modern-table-card mb-4">
+  <div class="table-responsive">
+    <table class="table modern-table mb-0">
+      <thead>
+        <tr>
+          <th>Course Code</th>
+          <th>Course Title</th>
+          <th class="text-center">Final Score</th>
+          <th class="text-center">Alpha Grade</th>
+          <th class="text-center">Credits Attempt.</th>
+          <th class="text-center">Credits Earned</th>
+          <th class="text-center">GradePoint</th>
+          <th class="text-center">TotalPoint</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for enrollment in term_data.enrollments %}
+        <tr>
+          <td class="fw-semibold">{{ enrollment.class_instance.subject.name|slice:":6"|upper }}</td>
+          <td>{{ enrollment.class_instance.subject.name }}</td>
+          <td class="text-center">
+            {% if enrollment.final_score is not None %}
+              {{ enrollment.final_score|floatformat:2 }}%
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if enrollment.final_grade %}
+              <span class="badge bg-success bg-opacity-10 text-success px-2 py-1 rounded-pill">{{ enrollment.final_grade }}</span>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+          <td class="text-center">{{ enrollment.class_instance.subject.credits }}</td>
+          <td class="text-center">
+            {% if enrollment.final_grade %}
+              {{ enrollment.class_instance.subject.credits }}
+            {% else %}
+              <span class="text-muted">0</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if enrollment.point is not None %}
+              {{ enrollment.point|floatformat:2 }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if enrollment.total_point is not None %}
+              {{ enrollment.total_point|floatformat:2 }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if enrollment.point >= 3.5 %}
+              <span class="text-primary">Superior</span>
+            {% elif enrollment.point >= 2.5 %}
+              <span class="text-success">Good</span>
+            {% elif enrollment.point is not None %}
+              <span class="text-warning">Average</span>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        
+        <!-- Term Totals Row -->
+        <tr style="background-color: rgba(0,0,0,0.02);">
+          <td colspan="4" class="text-end fw-semibold">Term Totals</td>
+          <td class="text-center fw-semibold">{{ term_data.total_credits }}</td>
+          <td class="text-center fw-semibold text-success">{{ term_data.credits_earned }}</td>
+          <td colspan="1" class="text-end fw-semibold">Term GPA</td>
+          <td class="text-center fw-bold text-primary">{{ term_data.gpa|floatformat:2 }}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% empty %}
+<div class="card modern-table-card mb-5">
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i data-lucide="inbox"></i>
+    </div>
+    <h5>No grades available</h5>
+    <p>You do not have any graded courses yet.</p>
+  </div>
+</div>
+{% endfor %}
+
+{% if terms_data %}
+<!-- Overall Cumulative Totals Summary -->
+<div class="card modern-table-card mt-5 mb-5" style="border: 2px solid var(--border-color); background-color: #fafbfc;">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <h5 style="margin: 0; color: var(--text-primary); font-weight: 700;">Overall Academic Summary</h5>
+        <p style="margin: 0; color: var(--text-muted); font-size: 13px;">Cumulative totals across all terms</p>
+      </div>
+      <div class="d-flex gap-4">
+        <div class="text-center">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Total Credits</div>
+          <div style="font-size: 1.25rem; font-weight: 700;">{{ overall_total_credits }}</div>
+        </div>
+        <div class="text-center">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Credits Earned</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: var(--bs-success);">{{ overall_credits_earned }}</div>
+        </div>
+        <div class="text-center" style="padding-left: 1rem; border-left: 1px solid var(--border-color);">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Cumulative GPA</div>
+          <div style="font-size: 1.5rem; font-weight: 800; color: var(--bs-primary);">{{ overall_gpa|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function() {
+  const paletteBg = [
+    'rgba(0, 119, 182, 0.6)',
+    'rgba(43, 196, 138, 0.6)',
+    'rgba(139, 92, 246, 0.6)',
+    'rgba(245, 158, 11, 0.6)',
+    'rgba(236, 72, 153, 0.6)',
+    'rgba(16, 185, 129, 0.6)'
+  ];
+  const paletteBorder = [
+    '#0077b6',
+    '#2bc48a',
+    '#8b5cf6',
+    '#f59e0b',
+    '#ec4899',
+    '#10b981'
+  ];
+
+  // --- GPA Comparison Bar Chart ---
+  const rawLabels = [{% for term_data in terms_data %}"{{ term_data.term.name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const rawData   = [{% for term_data in terms_data %}{{ term_data.gpa|floatformat:2 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+  
+  const gpaLabels = rawLabels.reverse();
+  const gpaData = rawData.reverse();
+  
+  const gpaBgColors = gpaLabels.map((_, i) => paletteBg[i % paletteBg.length]);
+  const gpaBorderColors = gpaLabels.map((_, i) => paletteBorder[i % paletteBorder.length]);
+
+  if (gpaLabels.length > 0) {
+    const ctxGpa = document.getElementById('gpaChart');
+    if (ctxGpa) {
+        new Chart(ctxGpa, {
+          type: 'bar',
+          data: {
+            labels: gpaLabels,
+            datasets: [{
+              label: 'Yearly GPA',
+              data: gpaData,
+              backgroundColor: gpaBgColors,
+              borderColor: gpaBorderColors,
+              borderWidth: 1,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 800, easing: 'easeOutQuart' },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#03045e',
+                titleFont: { weight: '600' },
+                cornerRadius: 8,
+                padding: 10,
+                callbacks: { label: ctx => ` GPA: ${ctx.parsed.y}` }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 4.0, 
+                grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+                ticks: { precision: 1, color: '#94a3b8', font: { size: 12 } },
+                border: { display: false }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { color: '#64748b', font: { size: 12 } },
+                border: { display: false }
+              }
+            }
+          }
+        });
+    }
+  }
+
+  // --- Course Scores Bar Chart ---
+  const courseData = [];
+  {% for term_data in terms_data %}
+    {% for enrollment in term_data.enrollments %}
+      {% if enrollment.final_score is not None %}
+        courseData.push({
+          label: ["{{ enrollment.class_instance.subject.name|escapejs }}", "{{ term_data.term.name|escapejs }}"],
+          score: {{ enrollment.final_score|floatformat:2 }},
+          termName: "{{ term_data.term.name|escapejs }}"
+        });
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+  
+  // Reversing so oldest is first
+  courseData.reverse();
+
+  // Assign a color to each unique term
+  const termColorMapBg = {};
+  const termColorMapBorder = {};
+  let colorIndex = 0;
+  
+  courseData.forEach(item => {
+    if (!termColorMapBg[item.termName]) {
+      termColorMapBg[item.termName] = paletteBg[colorIndex % paletteBg.length];
+      termColorMapBorder[item.termName] = paletteBorder[colorIndex % paletteBorder.length];
+      colorIndex++;
+    }
+  });
+
+  const courseLabels = courseData.map(item => item.label);
+  const courseScores = courseData.map(item => item.score);
+  const courseBgColors = courseData.map(item => termColorMapBg[item.termName]);
+  const courseBorderColors = courseData.map(item => termColorMapBorder[item.termName]);
+
+  if (courseLabels.length > 0) {
+    const ctxScores = document.getElementById('scoresChart');
+    if (ctxScores) {
+        new Chart(ctxScores, {
+          type: 'bar',
+          data: {
+            labels: courseLabels,
+            datasets: [{
+              label: 'Final Score',
+              data: courseScores,
+              backgroundColor: courseBgColors,
+              borderColor: courseBorderColors,
+              borderWidth: 1,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 800, easing: 'easeOutQuart' },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#03045e',
+                titleFont: { weight: '600' },
+                cornerRadius: 8,
+                padding: 10,
+                callbacks: { label: ctx => ` Score: ${ctx.parsed.y}%` }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+                ticks: { color: '#94a3b8', font: { size: 12 } },
+                border: { display: false }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { 
+                    color: '#64748b', 
+                    font: { size: 10 },
+                    maxRotation: 45,
+                    minRotation: 45
+                },
+                border: { display: false }
+              }
+            }
+          }
+        });
+    }
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}My Major{% endblock %}
+
+{% block active_student_major %}active{% endblock %}
+
+{% block content %}
+<div class="hero-banner mb-4">
+  <div class="d-flex align-items-center gap-4">
+    <div class="hero-avatar">
+      <i data-lucide="graduation-cap" style="width:32px;height:32px"></i>
+    </div>
+    <div style="z-index:1">
+      <h2>My Major</h2>
+      <p>Your academic program and curriculum details.</p>
+    </div>
+  </div>
+</div>
+
+<div class="card modern-table-card mx-auto" style="max-width: 800px;">
+  <div class="card-body p-0">
+    <table class="table modern-table mb-0">
+      <tbody>
+        <tr>
+          <th style="width: 30%; border-bottom: none; border-right: 1px solid var(--border-row);">Student</th>
+          <td class="fw-semibold text-primary" style="border-bottom: none; color: var(--text-primary) !important;">
+            {{ user.get_full_name|default:user.username }} 
+            {% if student.student_id %}({{ student.student_id }}){% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th style="border-bottom: none; border-right: 1px solid var(--border-row); border-top: 1px solid var(--border-row);">Department</th>
+          <td style="border-bottom: none; border-top: 1px solid var(--border-row);">
+            {{ student.department.name|default:"Not Assigned" }}
+          </td>
+        </tr>
+        <tr>
+          <th style="border-bottom: none; border-right: 1px solid var(--border-row); border-top: 1px solid var(--border-row);">Level of Study</th>
+          <td style="border-bottom: none; border-top: 1px solid var(--border-row);">
+            {{ student.level|default:"Not Assigned" }}
+          </td>
+        </tr>
+        <tr>
+          <th style="border-bottom: none; border-right: 1px solid var(--border-row); border-top: 1px solid var(--border-row);">Major</th>
+          <td style="border-bottom: none; border-top: 1px solid var(--border-row);">
+            {{ student.department.name|default:"Not Assigned" }}
+          </td>
+        </tr>
+        <tr>
+          <th style="border-bottom: none; border-right: 1px solid var(--border-row); border-top: 1px solid var(--border-row);">Admission Date</th>
+          <td style="border-bottom: none; border-top: 1px solid var(--border-row);">
+            {{ student.created_at|default:user.date_joined|date:"d-M-Y" }}
+          </td>
+        </tr>
+        <tr>
+          <th style="border-bottom: none; border-right: 1px solid var(--border-row); border-top: 1px solid var(--border-row);">Batch Number</th>
+          <td style="border-bottom: none; border-top: 1px solid var(--border-row);">
+            {{ student.batch|default:"Not Assigned" }}
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
