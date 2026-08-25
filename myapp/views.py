@@ -45,7 +45,7 @@ def student_dashboard(request):
             'class_instance__term',
             'class_instance__room',
             'class_instance__teacher',
-        ).order_by('-class_instance__term__start_date', 'class_instance__subject__name')
+        ).order_by('-class_instance__term__start_date', '-class_instance__term__name', 'class_instance__subject__name')
         
         # Calculate total credits
         total_credits = sum(e.class_instance.subject.credits for e in enrollments)
@@ -83,7 +83,7 @@ def student_grades(request):
         enrollments = request.user.student.enrollment_set.select_related(
             'class_instance__subject',
             'class_instance__term'
-        ).order_by('-class_instance__term__start_date', 'class_instance__subject__name')
+        ).order_by('-class_instance__term__start_date', '-class_instance__term__name', 'class_instance__subject__name')
         
         overall_total_credits = 0
         overall_credits_earned = 0

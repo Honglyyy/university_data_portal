@@ -162,32 +162,80 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (function() {
-  const labels = [{% for c in classes %}"{{ c.subject.name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const labels = [{% for c in classes %}"{{ c.subject.name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}];
   const data   = [{% for c in classes %}{{ c.student_count }}{% if not forloop.last %},{% endif %}{% endfor %}];
 
   if (labels.length === 0) return;
 
+  const paletteBg = [
+    'rgba(0, 119, 182, 0.6)',
+    'rgba(43, 196, 138, 0.6)',
+    'rgba(139, 92, 246, 0.6)',
+    'rgba(245, 158, 11, 0.6)',
+    'rgba(236, 72, 153, 0.6)',
+    'rgba(16, 185, 129, 0.6)'
+  ];
+  const paletteBorder = [
+    '#0077b6',
+    '#2bc48a',
+    '#8b5cf6',
+    '#f59e0b',
+    '#ec4899',
+    '#10b981'
+  ];
+
+  const pointBgColors = labels.map((_, i) => paletteBg[i % paletteBg.length]);
+  const pointBorderColors = labels.map((_, i) => paletteBorder[i % paletteBorder.length]);
+
   const ctx = document.getElementById('enrollmentChart');
   new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: labels,
       datasets: [{
         label: 'Students Enrolled',
         data: data,
-        backgroundColor: 'rgba(0, 119, 182, 0.15)',
+        backgroundColor: 'rgba(0, 119, 182, 0.1)',
         borderColor: '#0077b6',
         borderWidth: 2,
-        borderRadius: 10,
-        borderSkipped: false,
-        hoverBackgroundColor: 'rgba(0, 119, 182, 0.3)',
+        pointBackgroundColor: pointBgColors,
+        pointBorderColor: pointBorderColors,
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        fill: true,
+        tension: 0.3
       }]
     },
     options: {
       responsive: true,
       animation: { duration: 800, easing: 'easeOutQuart' },
       plugins: {
-        legend: { display: false },
+        legend: { 
+          display: true,
+          position: 'top',
+          labels: {
+            generateLabels: function(chart) {
+              const data = chart.data;
+              if (data.labels.length && data.datasets.length) {
+                return data.labels.map((label, i) => {
+                  return {
+                    text: label,
+                    fillStyle: pointBgColors[i],
+                    strokeStyle: pointBorderColors[i],
+                    lineWidth: 2,
+                    hidden: false,
+                    index: i
+                  };
+                });
+              }
+              return [];
+            }
+          },
+          onClick: function(e, legendItem, legend) {
+            // Prevent default behavior to avoid hiding the entire line dataset
+          }
+        },
         tooltip: {
           backgroundColor: '#03045e',
           titleFont: { weight: '600' },
