@@ -401,10 +401,10 @@ def import_scores_excel(request, class_id, assessment_id):
         enrollment_map = {str(e.student.student_id): e for e in enrollments}
         
         updated_count = 0
-        skipped_count = 0
+        errors = []
 
         # Skip header
-        for row in ws.iter_rows(min_row=2, values_only=True):
+        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             if row[id_idx] is None:
                 continue
                 
@@ -415,13 +415,17 @@ def import_scores_excel(request, class_id, assessment_id):
                 continue
 
             try:
-                score_val = float(score_val)
-            except ValueError:
-                skipped_count += 1
+                score_float = float(score_val)
+            except (ValueError, TypeError):
+                errors.append(f"Row {row_idx}: Student {student_id} — Invalid score value '{score_val}'")
                 continue
             
-            if score_val < 0 or score_val > float(assessment.max_score):
-                skipped_count += 1
+            if score_float < 0:
+                errors.append(f"Row {row_idx}: Student {student_id} — Score cannot be negative ({score_float})")
+                continue
+            
+            if score_float > float(assessment.max_score):
+                errors.append(f"Row {row_idx}: Student {student_id} — Score ({score_float}) exceeds max score ({assessment.max_score})")
                 continue
 
             if student_id in enrollment_map:
@@ -429,14 +433,19 @@ def import_scores_excel(request, class_id, assessment_id):
                 obj, created = StudentScore.objects.update_or_create(
                     enrollment=enrollment,
                     assessment=assessment,
-                    defaults={'score': score_val}
+                    defaults={'score': score_float}
                 )
                 updated_count += 1
             else:
-                skipped_count += 1
+                errors.append(f"Row {row_idx}: Student ID '{student_id}' is not enrolled in this class")
         
-        if skipped_count > 0:
-            messages.success(request, f'Successfully imported scores for {updated_count} students. (Skipped/Invalid: {skipped_count})')
+        if errors:
+            error_list = "".join([f"<li>{err}</li>" for err in errors])
+            messages.error(
+                request, 
+                f"Successfully imported scores for {updated_count} students. (Skipped/Invalid: {len(errors)})<br><ul>{error_list}</ul>",
+                extra_tags='safe'
+            )
         else:
             messages.success(request, f'Successfully imported scores for {updated_count} students.')
     
