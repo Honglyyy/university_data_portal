@@ -16,4 +16,9 @@ urlpatterns = [
     path('teacher/class/<int:class_id>/assignment/<int:assessment_id>/import/', views.import_scores_excel, name='import_scores_excel'),
     path('teacher/class/<int:class_id>/assignment/<int:assessment_id>/delete/', views.delete_assessment, name='delete_assessment'),
     path('logout-confirm/', TemplateView.as_view(template_name='registration/logout_confirm.html'), name='logout-confirm'),
+    path('frontdesk/dashboard/', views.frontdesk_dashboard, name='frontdesk_dashboard'),
+    path('frontdesk/register/', views.frontdesk_register_student, name='frontdesk_register_student'),
+    path('frontdesk/enroll/', views.frontdesk_enroll_student, name='frontdesk_enroll_student'),
+    path('frontdesk/students/', views.frontdesk_manage_students, name='frontdesk_manage_students'),
+    path('frontdesk/api/classes/', views.frontdesk_api_classes, name='frontdesk_api_classes'),
 ]

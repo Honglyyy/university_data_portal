@@ -1,0 +1,126 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}Manage Students{% endblock %}
+{% block active_frontdesk_students %}active{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-end flex-wrap gap-3">
+  <div>
+    <h2>Manage Students</h2>
+    <p class="text-muted mb-0">Search and manage student profiles.</p>
+  </div>
+  
+  <form method="GET" class="d-flex gap-2 align-items-center flex-wrap" style="flex: 1; max-width: 800px; justify-content: flex-end;">
+    <select name="department" class="form-select" style="width: auto; min-width: 150px;">
+      <option value="">All Departments</option>
+      {% for dept in departments %}
+      <option value="{{ dept.id }}" {% if department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+    
+    <select name="level" class="form-select" style="width: auto; min-width: 120px;">
+      <option value="">All Levels</option>
+      {% for l in levels %}
+      <option value="{{ l }}" {% if level == l %}selected{% endif %}>{{ l }}</option>
+      {% endfor %}
+    </select>
+    
+    <select name="batch" class="form-select" style="width: auto; min-width: 120px;">
+      <option value="">All Batches</option>
+      {% for b in batches %}
+      <option value="{{ b }}" {% if batch == b %}selected{% endif %}>{{ b }}</option>
+      {% endfor %}
+    </select>
+
+    <input type="text" name="q" class="form-control" placeholder="Search..." value="{{ query }}" style="min-width: 150px; flex: 1;">
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if query or department_id or level or batch %}
+    <a href="{% url 'frontdesk_manage_students' %}" class="btn btn-outline-secondary">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card modern-table-card border-0 shadow-sm mb-5">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover modern-table mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="ps-4">Student ID</th>
+            <th>Full Name</th>
+            <th>Department</th>
+            <th>Level</th>
+            <th>Batch</th>
+            <th>Registration Date</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          <tr>
+            <td class="ps-4 fw-medium">{{ student.student_id }}</td>
+            <td>
+                <div class="d-flex align-items-center">
+                  <div class="avatar bg-body-secondary text-primary rounded-circle me-3 d-flex justify-content-center align-items-center" style="width:36px;height:36px;font-weight:600;">
+                    {{ student.user.first_name|first|default:student.user.username|first|upper }}
+                  </div>
+                  <div>
+                    <div class="fw-bold">{{ student.user.get_full_name|default:student.user.username }}</div>
+                    <div class="text-muted" style="font-size:12px;">{{ student.user.email }}</div>
+                  </div>
+                </div>
+            </td>
+            <td>{{ student.department.name }}</td>
+            <td>{{ student.level }}</td>
+            <td>{{ student.batch|default:"-" }}</td>
+            <td>{{ student.created_at|date:"M d, Y" }}</td>
+            <td class="text-end pe-4">
+              <a href="{% url 'frontdesk_enroll_student' %}?student_id={{ student.id }}" class="btn btn-sm btn-outline-primary">
+                <i data-lucide="graduation-cap" style="width:14px;height:14px;margin-right:2px;vertical-align:text-bottom"></i> Enroll
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+                <i data-lucide="search-x" class="mb-3" style="width:48px;height:48px;opacity:0.3"></i>
+                <p>{% if query %}No students found matching your search.{% else %}No students registered yet.{% endif %}</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-transparent border-top pb-3 pt-3">
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mb-0">
+          {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if department_id %}&department={{ department_id }}{% endif %}{% if level %}&level={{ level|urlencode }}{% endif %}{% if batch %}&batch={{ batch|urlencode }}{% endif %}">Previous</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+          
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if department_id %}&department={{ department_id }}{% endif %}{% if level %}&level={{ level|urlencode }}{% endif %}{% if batch %}&batch={{ batch|urlencode }}{% endif %}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+          
+          {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if department_id %}&department={{ department_id }}{% endif %}{% if level %}&level={{ level|urlencode }}{% endif %}{% if batch %}&batch={{ batch|urlencode }}{% endif %}">Next</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+    
+  </div>
+</div>
+{% endblock %}

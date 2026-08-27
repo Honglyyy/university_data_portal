@@ -34,8 +34,10 @@
                 Teacher Panel
               {% elif user.student %}
                 Student Panel
-              {% else %}
+              {% elif user.is_superuser %}
                 Admin Panel
+              {% elif user.is_staff %}
+                Front Desk
               {% endif %}
             </div>
           </div>
@@ -60,6 +62,20 @@
           </a>
           <a href="{% url 'student_grades' %}" class="nav-item-link {% block active_student_grades %}{% endblock %}">
             <span class="nav-icon"><i data-lucide="award"></i></span> My Grades
+          </a>
+          
+        {% elif user.is_staff %}
+          <a href="{% url 'frontdesk_dashboard' %}" class="nav-item-link {% block active_frontdesk_dashboard %}{% endblock %}">
+            <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard
+          </a>
+          <a href="{% url 'frontdesk_register_student' %}" class="nav-item-link {% block active_frontdesk_register %}{% endblock %}">
+            <span class="nav-icon"><i data-lucide="user-plus"></i></span> Register Student
+          </a>
+          <a href="{% url 'frontdesk_enroll_student' %}" class="nav-item-link {% block active_frontdesk_enroll %}{% endblock %}">
+            <span class="nav-icon"><i data-lucide="graduation-cap"></i></span> Enroll Student
+          </a>
+          <a href="{% url 'frontdesk_manage_students' %}" class="nav-item-link {% block active_frontdesk_students %}{% endblock %}">
+            <span class="nav-icon"><i data-lucide="users"></i></span> Manage Students
           </a>
         {% endif %}
 

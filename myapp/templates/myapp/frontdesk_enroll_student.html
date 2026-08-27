@@ -1,0 +1,109 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}Enroll Student{% endblock %}
+{% block active_frontdesk_enroll %}active{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2>Enroll Student in a Class</h2>
+  <p class="text-muted">Register an existing student for a specific class instance.</p>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="card shadow-sm border-0 mb-5">
+  <div class="card-body p-4">
+    <form method="POST">
+      {% csrf_token %}
+      
+      <div class="row g-4 mb-4">
+        <div class="col-md-12">
+          <label for="student" class="form-label">Student *</label>
+          <select class="form-select" id="student" name="student" required>
+            <option value="" selected disabled>Select a student...</option>
+            {% for student in students %}
+            <option value="{{ student.id }}" {% if student.id == prefill_student_id %}selected{% endif %}>
+              {{ student.student_id }} - {{ student.user.get_full_name|default:student.user.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="term" class="form-label">Term *</label>
+          <select class="form-select" id="term" name="term" required>
+            <option value="" selected disabled>Select a term...</option>
+            {% for term in terms %}
+            <option value="{{ term.id }}">{{ term.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="class_instance" class="form-label">Class *</label>
+          <select class="form-select" id="class_instance" name="class_instance" required disabled>
+            <option value="" selected disabled>Select a term first...</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary px-4 py-2">
+          <i data-lucide="graduation-cap" style="width:18px;height:18px;margin-right:6px;vertical-align:text-bottom"></i>
+          Enroll Student
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const termSelect = document.getElementById('term');
+    const classSelect = document.getElementById('class_instance');
+    
+    termSelect.addEventListener('change', function() {
+        const termId = this.value;
+        if (!termId) {
+            classSelect.innerHTML = '<option value="" selected disabled>Select a term first...</option>';
+            classSelect.disabled = true;
+            return;
+        }
+        
+        classSelect.innerHTML = '<option value="" selected disabled>Loading classes...</option>';
+        classSelect.disabled = true;
+        
+        fetch(`/frontdesk/api/classes/?term_id=${termId}`)
+            .then(response => response.json())
+            .then(data => {
+                classSelect.innerHTML = '<option value="" selected disabled>Select a class...</option>';
+                if (data.length === 0) {
+                    classSelect.innerHTML = '<option value="" selected disabled>No classes available for this term</option>';
+                } else {
+                    data.forEach(cls => {
+                        const option = document.createElement('option');
+                        option.value = cls.id;
+                        option.textContent = cls.name;
+                        classSelect.appendChild(option);
+                    });
+                    classSelect.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching classes:', error);
+                classSelect.innerHTML = '<option value="" selected disabled>Error loading classes</option>';
+            });
+    });
+});
+</script>
+{% endblock %}

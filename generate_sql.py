@@ -57,17 +57,25 @@ for dep in departments:
     write(f"INSERT INTO myapp_department (name) VALUES ('{dep}');")
 
 # 3. Terms
-# 11 terms: Fall 2020 to Fall 2025
+# 12 terms: Fall 2020 to Spring 2026
 write("\n-- Terms")
 term_names = []
 term_years = {}
-for i in range(11):
-    year = START_YEAR + (i // 2)
-    sem = "Fall" if i % 2 == 0 else "Spring"
+for i in range(12):
+    if i % 2 == 0:
+        sem = "Fall"
+        year = START_YEAR + (i // 2)
+        start_date = f"{year}-09-01"
+        end_date = f"{year}-12-31"
+    else:
+        sem = "Spring"
+        year = START_YEAR + (i // 2) + 1
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-05-31"
     term_name = f"{sem} {year}"
     term_names.append(term_name)
     term_years[term_name] = year
-    write(f"INSERT INTO myapp_term (name, start_date, end_date) VALUES ('{term_name}', '{year}-01-01', '{year}-06-01');")
+    write(f"INSERT INTO myapp_term (name, start_date, end_date) VALUES ('{term_name}', '{start_date}', '{end_date}');")
 
 # 4. Subjects
 write("\n-- Subjects")
@@ -94,12 +102,23 @@ for username in teacher_usernames:
 # 6. Students
 write("\n-- Students")
 student_data = [] # stores dict of student info
-for username in student_usernames:
+for idx, username in enumerate(student_usernames):
     dep_name = random.choice(departments)
     stid = f"STID-{username}"
     
-    # Assign a batch 1 to 6
-    batch_num = random.randint(1, 6)
+    student_number = idx + 1
+    if student_number <= 133:
+        batch_num = 1
+    elif student_number <= 266:
+        batch_num = 2
+    elif student_number <= 399:
+        batch_num = 3
+    elif student_number <= 533:
+        batch_num = 4
+    elif student_number <= 666:
+        batch_num = 5
+    else:
+        batch_num = 6
     
     student_data.append({
         'stid': stid,
@@ -143,6 +162,10 @@ for tid in teacher_ids:
             sub_name = random.choice(possible_subjects)
             schedule = schedules[i]
             
+            # Determine active batches for this term
+            active_batches = [b for b in range(1, 7) if (b - 1) * 2 <= term_idx < (b - 1) * 2 + 8]
+            batch_num = random.choice(active_batches) if active_batches else 1
+            
             all_classes.append({
                 'cid': cid,
                 'tid': tid,
@@ -150,14 +173,14 @@ for tid in teacher_ids:
                 'sub_name': sub_name,
                 'term_idx': term_idx,
                 'term_name': term_name,
-                'schedule': schedule
+                'schedule': schedule,
+                'batch': batch_num
             })
             cid_counter += 1
 
 for cls in all_classes:
     term_name = cls['term_name']
-    class_year = term_years[term_name]
-    batch_num = class_year - START_YEAR + 1
+    batch_num = cls['batch']
     write(f"INSERT INTO myapp_class (class_id, batch, schedule, room_id, subject_id, teacher_id, term_id) VALUES ('{cls['cid']}', 'Batch {batch_num}', '{cls['schedule']}', (SELECT id FROM myapp_room WHERE name = '{cls['room_name']}'), (SELECT id FROM myapp_subject WHERE name = '{cls['sub_name']}'), (SELECT id FROM myapp_teacher WHERE teacher_id = '{cls['tid']}'), (SELECT id FROM myapp_term WHERE name = '{term_name}'));")
 
 # 9. Assessments
@@ -180,27 +203,21 @@ for cls in all_classes:
 write("\n-- Enrollments")
 scores_sql = ["\n-- StudentScores"]
 
-import collections
-students_by_term = collections.defaultdict(list)
-for student in student_data:
-    batch = student['batch']
-    start_term = (batch - 1) * 2
-    end_term = start_term + 1
-    students_by_term[start_term].append(student)
-    students_by_term[end_term].append(student)
-
-for term_idx in range(11):
+for term_idx in range(12):
     classes_in_term = [c for c in all_classes if c['term_idx'] == term_idx]
-    students_in_term = students_by_term[term_idx]
     
     for cls in classes_in_term:
         cid = cls['cid']
+        cls_batch = cls.get('batch')
+        
+        # Enforce same-batch-only enrollment
+        valid_students = [s for s in student_data if s['batch'] == cls_batch]
         
         num_students_for_class = random.randint(10, 20)
-        num_students_for_class = min(num_students_for_class, len(students_in_term))
+        num_students_for_class = min(num_students_for_class, len(valid_students))
         if num_students_for_class == 0: continue
         
-        enrolled_students = random.sample(students_in_term, num_students_for_class)
+        enrolled_students = random.sample(valid_students, num_students_for_class)
         
         for student in enrolled_students:
             stid = student['stid']

@@ -66,12 +66,6 @@ class Class(models.Model):
 
     @property
     def computed_batch(self):
-        parts = self.term.name.split()
-        if len(parts) == 2:
-            sem, year = parts[0], int(parts[1])
-            term_num = (year - 2020) * 2 + (1 if sem == "Fall" else 2)
-            batch_num = (term_num + 1) // 2
-            return f"Batch {batch_num}"
         return self.batch
 
     def __str__(self):

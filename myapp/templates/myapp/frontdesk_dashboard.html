@@ -1,0 +1,112 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}Front Desk Dashboard{% endblock %}
+{% block active_frontdesk_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="hero-banner">
+  <div class="d-flex align-items-center gap-4">
+    <div class="hero-avatar">
+      <i data-lucide="building"></i>
+    </div>
+    <div>
+      <h2>Front Desk Overview</h2>
+      <p>Welcome back, {{ user.get_full_name|default:user.username }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-5">
+  <div class="col-md-3">
+    <div class="stat-card stat-blue h-100">
+      <div class="stat-icon">
+        <i data-lucide="users"></i>
+      </div>
+      <div class="stat-value">{{ total_students }}</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="stat-card stat-purple h-100">
+      <div class="stat-icon">
+        <i data-lucide="book-open"></i>
+      </div>
+      <div class="stat-value">{{ total_classes }}</div>
+      <div class="stat-label">Total Classes</div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="stat-card stat-green h-100">
+      <div class="stat-icon">
+        <i data-lucide="calendar"></i>
+      </div>
+      <div class="stat-value">{{ current_term.name|default:"N/A" }}</div>
+      <div class="stat-label">Current Term</div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="stat-card stat-blue h-100">
+      <div class="stat-icon">
+        <i data-lucide="building-2"></i>
+      </div>
+      <div class="stat-value">{{ total_departments }}</div>
+      <div class="stat-label">Departments</div>
+    </div>
+  </div>
+</div>
+
+<div class="card modern-table-card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-bottom px-4 py-3">
+    <h5 class="mb-0">Recent Registrations</h5>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover modern-table mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="ps-4">Student ID</th>
+            <th>Full Name</th>
+            <th>Department</th>
+            <th>Level</th>
+            <th>Batch</th>
+            <th class="pe-4">Registration Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in recent_students %}
+          <tr>
+            <td class="ps-4 fw-medium">{{ student.student_id }}</td>
+            <td>
+                <div class="d-flex align-items-center">
+                  <div class="avatar bg-body-secondary text-primary rounded-circle me-3 d-flex justify-content-center align-items-center" style="width:36px;height:36px;font-weight:600;">
+                    {{ student.user.first_name|first|default:student.user.username|first|upper }}
+                  </div>
+                  <div>
+                    <div class="fw-bold">{{ student.user.get_full_name|default:student.user.username }}</div>
+                    <div class="text-muted" style="font-size:12px;">{{ student.user.email }}</div>
+                  </div>
+                </div>
+            </td>
+            <td>{{ student.department.name }}</td>
+            <td>{{ student.level }}</td>
+            <td>{{ student.batch|default:"-" }}</td>
+            <td class="pe-4">{{ student.created_at|date:"M d, Y" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+                <i data-lucide="users" class="mb-3" style="width:48px;height:48px;opacity:0.3"></i>
+                <p>No recent registrations found.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

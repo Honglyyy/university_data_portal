@@ -12,8 +12,10 @@ def index(request):
         return redirect('teacher_dashboard')
     elif hasattr(user, 'student'):
         return redirect('student_dashboard')
-    elif user.is_staff or user.is_superuser:
+    elif user.is_superuser:
         return redirect('/admin/')
+    elif user.is_staff:
+        return redirect('frontdesk_dashboard')
     else:
         # Fallback if the user has no role assigned
         return render(request, 'myapp/base.html')
@@ -443,3 +445,200 @@ def import_scores_excel(request, class_id, assessment_id):
     
     return redirect('teacher_assignment_scores', class_id=class_id, assessment_id=assessment_id)
 
+
+from django.contrib.auth.decorators import user_passes_test
+from django.db import IntegrityError
+from django.db.models import Q
+from django.http import JsonResponse
+from myapp.models import User, Department, Term, Subject, Enrollment
+
+def is_frontdesk(user):
+    return user.is_active and user.is_staff
+
+@user_passes_test(is_frontdesk, login_url='/login')
+def frontdesk_dashboard(request):
+    total_students = Student.objects.count()
+    total_classes = Class.objects.count()
+    current_term = Term.objects.order_by('-start_date').first()
+    total_departments = Department.objects.count()
+    recent_students = Student.objects.select_related('user', 'department').order_by('-created_at')[:10]
+
+    context = {
+        'total_students': total_students,
+        'total_classes': total_classes,
+        'current_term': current_term,
+        'total_departments': total_departments,
+        'recent_students': recent_students,
+    }
+    return render(request, 'myapp/frontdesk_dashboard.html', context)
+
+@user_passes_test(is_frontdesk, login_url='/login')
+def frontdesk_register_student(request):
+    departments = Department.objects.all().order_by('name')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        password = request.POST.get('password')
+        
+        student_id = request.POST.get('student_id')
+        department_id = request.POST.get('department')
+        level = request.POST.get('level')
+        batch = request.POST.get('batch')
+        
+        if not all([username, email, password, student_id, department_id, level]):
+            messages.error(request, 'Please fill in all required fields.')
+            return redirect('frontdesk_register_student')
+            
+        if User.objects.filter(username=username).exists():
+            messages.error(request, f'Username "{username}" is already taken.')
+            return redirect('frontdesk_register_student')
+            
+        if Student.objects.filter(student_id=student_id).exists():
+            messages.error(request, f'Student ID "{student_id}" is already in use.')
+            return redirect('frontdesk_register_student')
+            
+        try:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+            department = Department.objects.get(id=department_id)
+            student = Student.objects.create(
+                user=user,
+                student_id=student_id,
+                department=department,
+                level=level,
+                batch=batch
+            )
+            messages.success(request, f'Student {first_name} {last_name} ({student_id}) registered successfully!')
+        except Exception as e:
+            messages.error(request, f'Error registering student: {e}')
+            
+        return redirect('frontdesk_register_student')
+
+    next_student_id = "ST-0001"
+    latest_batch = "Batch 1"
+    
+    latest_student = Student.objects.order_by('-id').first()
+    if latest_student:
+        import re
+        match = re.search(r'\d+', latest_student.student_id)
+        if match:
+            num = int(match.group())
+            next_student_id = f"ST-{num + 1:04d}"
+        
+        if latest_student.batch:
+            latest_batch = latest_student.batch
+
+    context = {
+        'departments': departments,
+        'next_student_id': next_student_id,
+        'latest_batch': latest_batch,
+    }
+    return render(request, 'myapp/frontdesk_register_student.html', context)
+
+@user_passes_test(is_frontdesk, login_url='/login')
+def frontdesk_enroll_student(request):
+    prefill_student_id = request.GET.get('student_id', '')
+    terms = Term.objects.order_by('-start_date')
+    students = Student.objects.select_related('user').order_by('student_id')
+    
+    if request.method == 'POST':
+        student_id = request.POST.get('student')
+        class_id = request.POST.get('class_instance')
+        
+        if student_id and class_id:
+            try:
+                student = Student.objects.get(id=student_id)
+                class_instance = Class.objects.get(id=class_id)
+                
+                Enrollment.objects.create(
+                    student=student,
+                    class_instance=class_instance
+                )
+                messages.success(request, f'Successfully enrolled {student.user.get_full_name()} into {class_instance.subject.name}.')
+            except IntegrityError:
+                messages.error(request, 'This student is already enrolled in this class.')
+            except (Student.DoesNotExist, Class.DoesNotExist):
+                messages.error(request, 'Invalid student or class selected.')
+            except Exception as e:
+                messages.error(request, f'An error occurred: {e}')
+                
+        return redirect('frontdesk_enroll_student')
+        
+    context = {
+        'terms': terms,
+        'students': students,
+        'prefill_student_id': int(prefill_student_id) if prefill_student_id.isdigit() else None
+    }
+    return render(request, 'myapp/frontdesk_enroll_student.html', context)
+
+@user_passes_test(is_frontdesk, login_url='/login')
+def frontdesk_api_classes(request):
+    term_id = request.GET.get('term_id')
+    if term_id:
+        classes = Class.objects.filter(term_id=term_id).select_related('subject', 'teacher__user')
+        data = []
+        for c in classes:
+            schedule = c.schedule if c.schedule else "TBD"
+            name = f"{c.subject.name} - {c.teacher.user.get_full_name()} ({schedule})"
+            data.append({'id': c.id, 'name': name})
+        return JsonResponse(data, safe=False)
+    return JsonResponse([], safe=False)
+
+@user_passes_test(is_frontdesk, login_url='/login')
+def frontdesk_manage_students(request):
+    query = request.GET.get('q', '')
+    department_id = request.GET.get('department', '')
+    level = request.GET.get('level', '')
+    batch = request.GET.get('batch', '')
+
+    students = Student.objects.select_related('user', 'department')
+    
+    if query:
+        students = students.filter(
+            Q(student_id__icontains=query) |
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(user__email__icontains=query)
+        )
+        
+    if department_id:
+        students = students.filter(department_id=department_id)
+        
+    if level:
+        students = students.filter(level=level)
+        
+    if batch:
+        students = students.filter(batch=batch)
+        
+    students = students.order_by('-created_at')
+    
+    # Options for filter dropdowns
+    departments = Department.objects.all().order_by('name')
+    levels = Student.objects.values_list('level', flat=True).distinct().order_by('level')
+    batches = Student.objects.exclude(batch__isnull=True).exclude(batch='').values_list('batch', flat=True).distinct().order_by('batch')
+
+    from django.core.paginator import Paginator
+    paginator = Paginator(students, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+        
+    context = {
+        'students': page_obj, 
+        'page_obj': page_obj,
+        'query': query,
+        'department_id': department_id,
+        'level': level,
+        'batch': batch,
+        'departments': departments,
+        'levels': levels,
+        'batches': batches,
+    }
+    return render(request, 'myapp/frontdesk_manage_students.html', context)
