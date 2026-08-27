@@ -42,19 +42,16 @@
   <div class="col-sm-6 col-lg-4">
     <div class="stat-card stat-green shadow-sm">
       <div class="stat-icon">
-        <i data-lucide="calendar"></i>
+        <i data-lucide="dollar-sign"></i>
       </div>
       <div class="stat-value" style="font-size:1.4rem">
-        {% with first_class=classes|first %}
-          {{ first_class.term.name|default:"N/A" }}
-          {% if first_class.term.start_date and first_class.term.end_date %}
-            <span class="d-block" style="font-size: 11px; font-weight: 500; margin-top: 4px; color: var(--text-muted);">
-              {{ first_class.term.start_date|date:"M d, Y" }} - {{ first_class.term.end_date|date:"M d, Y" }}
-            </span>
-          {% endif %}
-        {% endwith %}
+        {% if salary %}
+          ${{ salary }}
+        {% else %}
+          N/A
+        {% endif %}
       </div>
-      <div class="stat-label">Current Term</div>
+      <div class="stat-label">Salary</div>
     </div>
   </div>
 </div>
@@ -73,90 +70,6 @@
   <canvas id="enrollmentChart" height="80"></canvas>
 </div>
 
-<!-- Class Cards Grid -->
-<div class="section-header">
-  <h5>My Assigned Classes</h5>
-  <span class="section-badge">{{ classes|length }} Classes</span>
-</div>
-
-<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-5">
-  {% for class in classes %}
-  <div class="col">
-    <div class="class-card h-100">
-      <div class="card-accent"></div>
-      <div class="card-header-custom">
-        <div class="subject-name">{{ class.subject.name }}</div>
-        <div class="subject-code">{{ class.term.name }}</div>
-      </div>
-      <div class="card-body">
-        <div class="info-row">
-          <div class="info-icon">
-            <i data-lucide="calendar-days"></i>
-          </div>
-          <div>
-            <div class="info-label">Term</div>
-            <div class="info-value">{{ class.term.name }}</div>
-            {% if class.term.start_date and class.term.end_date %}
-              <div style="font-size: 11px; margin-top: 1px; color: var(--text-muted);">
-                {{ class.term.start_date|date:"M d, Y" }} - {{ class.term.end_date|date:"M d, Y" }}
-              </div>
-            {% endif %}
-          </div>
-        </div>
-        <div class="info-row">
-          <div class="info-icon">
-            <i data-lucide="map-pin"></i>
-          </div>
-          <div>
-            <div class="info-label">Room</div>
-            <div class="info-value">
-              {% if class.room %}
-                {{ class.room.name }} <span style="font-size: 11px; color: var(--text-muted);">({{ class.room.building }}, {{ class.room.campus }})</span>
-              {% else %}
-                TBD
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        <div class="info-row">
-          <div class="info-icon">
-            <i data-lucide="users"></i>
-          </div>
-          <div>
-            <div class="info-label">Students Enrolled</div>
-            <div class="info-value">{{ class.student_count }}</div>
-          </div>
-        </div>
-        <div class="info-row">
-          <div class="info-icon">
-            <i data-lucide="award"></i>
-          </div>
-          <div>
-            <div class="info-label">Credits</div>
-            <div class="info-value">{{ class.subject.credits }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="card-footer-custom">
-        <a href="#" class="btn btn-manage">
-          Manage Roster &amp; Grades
-          <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:6px"></i>
-        </a>
-      </div>
-    </div>
-  </div>
-  {% empty %}
-  <div class="col-12">
-    <div class="empty-state">
-      <div class="empty-icon">
-        <i data-lucide="inbox"></i>
-      </div>
-      <h5>No classes assigned yet</h5>
-      <p>You currently have no classes assigned for this term. Please contact administration if this is an error.</p>
-    </div>
-  </div>
-  {% endfor %}
-</div>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -249,13 +162,13 @@
       scales: {
         y: {
           beginAtZero: true,
-          grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
-          ticks: { precision: 0, color: '#94a3b8', font: { size: 12 } },
+          grid: { color: 'rgba(128,128,128,0.15)', drawBorder: false },
+          ticks: { precision: 0, color: 'rgba(128,128,128,0.8)', font: { size: 12 } },
           border: { display: false }
         },
         x: {
           grid: { display: false },
-          ticks: { color: '#64748b', font: { size: 12 } },
+          ticks: { color: 'rgba(128,128,128,0.8)', font: { size: 12 } },
           border: { display: false }
         }
       }

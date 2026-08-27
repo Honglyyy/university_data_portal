@@ -6,11 +6,12 @@ def write(sql): f.write(sql + "\n")
 
 write("-- Seed data for university_data_portal")
 write("-- Completely relies on auto-increment and subqueries to prevent ANY conflicts!\n")
+write("BEGIN TRANSACTION;\n")
 
 password_hash = "pbkdf2_sha256$1500000$PfD8Ri2KEtlwcdipVIS24N$FZlKLGENSKMm8w9KVEfK8dM0Wn+WO7mNfR0EwnU7Imc="
 
 NUM_TEACHERS = 10
-NUM_STUDENTS = 100
+NUM_STUDENTS = 800
 NUM_DEPARTMENTS = 5
 NUM_ROOMS = 10
 
@@ -71,10 +72,13 @@ for i in range(11):
 # 4. Subjects
 write("\n-- Subjects")
 subject_names = []
+subject_credits_dict = {}
 for dep_name, subjects in department_subjects.items():
     for sub_name in subjects:
         subject_names.append(sub_name)
-        write(f"INSERT INTO myapp_subject (name, credits, department_id) VALUES ('{sub_name}', {random.choice([3,4])}, (SELECT id FROM myapp_department WHERE name = '{dep_name}'));")
+        c = random.choice([3,4])
+        subject_credits_dict[sub_name] = c
+        write(f"INSERT INTO myapp_subject (name, credits, department_id) VALUES ('{sub_name}', {c}, (SELECT id FROM myapp_department WHERE name = '{dep_name}'));")
 
 # 5. Teachers
 write("\n-- Teachers")
@@ -113,42 +117,48 @@ for i in range(1, NUM_ROOMS + 1):
     write(f"INSERT INTO myapp_room (name, building, campus) VALUES ('{rname}', 'Building {chr(65 + i%5)}', 'Main Campus');")
 
 # 8. Classes
-# Each teacher teaches 3-4 classes TOTAL.
-# We distribute these classes evenly across the 11 terms.
+# Each teacher teaches 1 class per term.
 write("\n-- Classes")
 all_classes = []
 cid_counter = 1
 
 for tid in teacher_ids:
-    num_classes = random.randint(3, 4)
     tid_dep = teacher_departments[tid]
     possible_subjects = department_subjects[tid_dep]
     
-    for _ in range(num_classes):
-        cid = f"C{cid_counter}"
-        room_name = random.choice(room_names)
-        sub_name = random.choice(possible_subjects)
+    for term_idx, term_name in enumerate(term_names):
+        num_classes_in_term = random.randint(2, 3)
         
-        all_classes.append({
-            'cid': cid,
-            'tid': tid,
-            'room_name': room_name,
-            'sub_name': sub_name
-        })
-        cid_counter += 1
+        if num_classes_in_term == 3:
+            schedules = ["Saturday 10:00 - 13:00", "Saturday 13:30 - 16:30", "Sunday 10:00 - 13:00"]
+        else:
+            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+            times = ["08:00 - 11:00", "12:00 - 15:00", "17:00 - 21:00"]
+            all_weekday_slots = [f"{d} {t}" for d in days for t in times]
+            schedules = random.sample(all_weekday_slots, num_classes_in_term)
+            
+        for i in range(num_classes_in_term):
+            cid = f"C{cid_counter}"
+            room_name = random.choice(room_names)
+            sub_name = random.choice(possible_subjects)
+            schedule = schedules[i]
+            
+            all_classes.append({
+                'cid': cid,
+                'tid': tid,
+                'room_name': room_name,
+                'sub_name': sub_name,
+                'term_idx': term_idx,
+                'term_name': term_name,
+                'schedule': schedule
+            })
+            cid_counter += 1
 
-# Shuffle and assign terms round-robin to ensure every term gets ~3 classes
-random.shuffle(all_classes)
-for i, cls in enumerate(all_classes):
-    term_idx = i % 11
-    term_name = term_names[term_idx]
-    cls['term_idx'] = term_idx
-    cls['term_name'] = term_name
-    
+for cls in all_classes:
+    term_name = cls['term_name']
     class_year = term_years[term_name]
     batch_num = class_year - START_YEAR + 1
-    
-    write(f"INSERT INTO myapp_class (class_id, batch, room_id, subject_id, teacher_id, term_id) VALUES ('{cls['cid']}', 'Batch {batch_num}', (SELECT id FROM myapp_room WHERE name = '{cls['room_name']}'), (SELECT id FROM myapp_subject WHERE name = '{cls['sub_name']}'), (SELECT id FROM myapp_teacher WHERE teacher_id = '{cls['tid']}'), (SELECT id FROM myapp_term WHERE name = '{term_name}'));")
+    write(f"INSERT INTO myapp_class (class_id, batch, schedule, room_id, subject_id, teacher_id, term_id) VALUES ('{cls['cid']}', 'Batch {batch_num}', '{cls['schedule']}', (SELECT id FROM myapp_room WHERE name = '{cls['room_name']}'), (SELECT id FROM myapp_subject WHERE name = '{cls['sub_name']}'), (SELECT id FROM myapp_teacher WHERE teacher_id = '{cls['tid']}'), (SELECT id FROM myapp_term WHERE name = '{term_name}'));")
 
 # 9. Assessments
 write("\n-- Assessments")
@@ -170,31 +180,64 @@ for cls in all_classes:
 write("\n-- Enrollments")
 scores_sql = ["\n-- StudentScores"]
 
+import collections
+students_by_term = collections.defaultdict(list)
 for student in student_data:
-    stid = student['stid']
     batch = student['batch']
-    
-    # Batch 1 starts at term 0. Batch 2 at term 2.
     start_term = (batch - 1) * 2
-    # 4 years = 8 terms contiguous. Cap at term 10 (current term)
-    end_term = min(start_term + 7, 10)
+    end_term = start_term + 1
+    students_by_term[start_term].append(student)
+    students_by_term[end_term].append(student)
+
+for term_idx in range(11):
+    classes_in_term = [c for c in all_classes if c['term_idx'] == term_idx]
+    students_in_term = students_by_term[term_idx]
     
-    # For every active term
-    for term_idx in range(start_term, end_term + 1):
-        classes_in_term = [c for c in all_classes if c['term_idx'] == term_idx]
+    for cls in classes_in_term:
+        cid = cls['cid']
         
-        # Take at least 3 courses (or all available if < 3)
-        num_to_take = min(len(classes_in_term), random.randint(3, 4))
-        if num_to_take == 0: continue
+        num_students_for_class = random.randint(10, 20)
+        num_students_for_class = min(num_students_for_class, len(students_in_term))
+        if num_students_for_class == 0: continue
         
-        enrolled_classes = random.sample(classes_in_term, num_to_take)
+        enrolled_students = random.sample(students_in_term, num_students_for_class)
         
-        for cls in enrolled_classes:
-            cid = cls['cid']
-            write(f"INSERT INTO myapp_enrollment (final_score, final_grade, credits, gpa, class_instance_id, student_id) VALUES (NULL, NULL, 0, 0.0, (SELECT id FROM myapp_class WHERE class_id = '{cid}'), (SELECT id FROM myapp_student WHERE student_id = '{stid}'));")
+        for student in enrolled_students:
+            stid = student['stid']
             
-            for aname in assessments_by_class[cid]:
+            assessments = assessments_by_class[cid]
+            total_achieved = 0.0
+            total_max = len(assessments) * 100.0
+            
+            my_scores = []
+            for aname in assessments:
                 score = random.uniform(40.0, 100.0)
+                my_scores.append((aname, score))
+                total_achieved += score
+                
+            final_score = (total_achieved / total_max) * 100 if total_max > 0 else 0
+            
+            if final_score >= 95:
+                final_grade, gpa = 'A+', 4.0
+            elif final_score >= 90:
+                final_grade, gpa = 'A', 3.75
+            elif final_score >= 85:
+                final_grade, gpa = 'B', 3.0
+            elif final_score >= 70:
+                final_grade, gpa = 'C', 2.0
+            elif final_score >= 65:
+                final_grade, gpa = 'D', 1.0
+            elif final_score >= 60:
+                final_grade, gpa = 'E', 0.5
+            else:
+                final_grade, gpa = 'F', 0.0
+                
+            sub_name = cls['sub_name']
+            credits_earned = subject_credits_dict[sub_name] if final_score >= 60 else 0 
+            
+            write(f"INSERT INTO myapp_enrollment (final_score, final_grade, credits, gpa, class_instance_id, student_id) VALUES ({final_score:.2f}, '{final_grade}', {credits_earned}, {gpa:.2f}, (SELECT id FROM myapp_class WHERE class_id = '{cid}'), (SELECT id FROM myapp_student WHERE student_id = '{stid}'));")
+            
+            for aname, score in my_scores:
                 enr_subquery = f"(SELECT id FROM myapp_enrollment WHERE student_id = (SELECT id FROM myapp_student WHERE student_id = '{stid}') AND class_instance_id = (SELECT id FROM myapp_class WHERE class_id = '{cid}'))"
                 ass_subquery = f"(SELECT id FROM myapp_assessment WHERE name = '{aname}')"
                 scores_sql.append(f"INSERT INTO myapp_studentscore (score, assessment_id, enrollment_id) VALUES ({score:.2f}, {ass_subquery}, {enr_subquery});")
@@ -202,4 +245,9 @@ for student in student_data:
 for line in scores_sql:
     write(line)
 
+write("\n-- Cleanup unused students")
+write("DELETE FROM myapp_student WHERE id NOT IN (SELECT student_id FROM myapp_enrollment);")
+write("DELETE FROM myapp_user WHERE is_staff = 0 AND id NOT IN (SELECT user_id FROM myapp_student);")
+
+write("COMMIT;")
 f.close()

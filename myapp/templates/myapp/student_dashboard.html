@@ -80,6 +80,7 @@
         <tr>
           <th style="width: 50px;">#</th>
           <th>Course Title</th>
+          <th>Schedule</th>
           <th>Rooms</th>
           <th>Teachers</th>
           <th>Batch</th>
@@ -95,6 +96,7 @@
         <tr>
             <td>{{ forloop.counter }}</td>
             <td class="fw-semibold">{{ enrollment.class_instance.subject.name }}</td>
+            <td class="text-secondary">{{ enrollment.class_instance.schedule|default:"TBD" }}</td>
             <td>
             {% if enrollment.class_instance.room %}
               {{ enrollment.class_instance.room.name }}

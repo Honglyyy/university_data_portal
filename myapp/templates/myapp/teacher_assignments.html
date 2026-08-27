@@ -1,0 +1,97 @@
+{% extends 'myapp/base.html' %}
+{% load static custom_tags %}
+
+{% block title %}Manage Assignments{% endblock %}
+
+{% block active_roster %}active{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-start">
+  <div>
+    <a href="{% url 'teacher_roster' class_instance.id %}" class="btn btn-outline-secondary btn-sm mb-3">
+      <i data-lucide="arrow-left" style="width:14px;height:14px;margin-right:4px"></i> Back to Roster
+    </a>
+    <h2>Manage Assignments</h2>
+    <h5 class="text-muted">{{ class_instance.subject.name }} - {{ class_instance.term.name }}</h5>
+  </div>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header">
+                <h5 class="mb-0">Create Assignment</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Assignment Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="max_score" class="form-label">Max Score</label>
+                        <input type="number" step="0.01" class="form-control" id="max_score" name="max_score" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="ps-4">Assignment Name</th>
+                                <th scope="col">Max Score</th>
+                                <th scope="col" class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignments %}
+                            <tr>
+                                <td class="ps-4">
+                                    <a href="{% url 'teacher_assignment_scores' class_instance.id assignment.id %}" class="text-decoration-none fw-medium">
+                                        {{ assignment.name }}
+                                    </a>
+                                </td>
+                                <td>{{ assignment.max_score }}</td>
+                                <td class="text-end pe-4">
+                                    <form method="POST" action="{% url 'delete_assessment' class_instance.id assignment.id %}" onsubmit="return confirm('Are you sure you want to delete this assignment? This will delete all student scores for this assignment.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i data-lucide="trash-2" style="width:14px;height:14px;margin-right:2px;vertical-align:text-bottom"></i> Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">
+                                    <i data-lucide="file-x" class="mb-2" style="width:24px;height:24px;opacity:0.5"></i>
+                                    <div>No assignments created yet.</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

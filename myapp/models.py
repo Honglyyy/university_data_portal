@@ -62,6 +62,17 @@ class Class(models.Model):
     term = models.ForeignKey(Term, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
     batch = models.CharField(max_length=100, null=True, blank=True)
+    schedule = models.CharField(max_length=255, null=True, blank=True)
+
+    @property
+    def computed_batch(self):
+        parts = self.term.name.split()
+        if len(parts) == 2:
+            sem, year = parts[0], int(parts[1])
+            term_num = (year - 2020) * 2 + (1 if sem == "Fall" else 2)
+            batch_num = (term_num + 1) // 2
+            return f"Batch {batch_num}"
+        return self.batch
 
     def __str__(self):
         return f"{self.subject.name} - {self.term.name}"
@@ -117,7 +128,7 @@ class Enrollment(models.Model):
 class Assessment(models.Model):
     class_instance = models.ForeignKey(Class, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    max_score = models.DecimalField(max_digits=5, decimal_places=2)
+    max_score = models.DecimalField(max_digits=7, decimal_places=2)
 
     def __str__(self):
         return f"{self.name} ({self.class_instance})"
@@ -125,7 +136,7 @@ class Assessment(models.Model):
 class StudentScore(models.Model):
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE)
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE)
-    score = models.DecimalField(max_digits=5, decimal_places=2)
+    score = models.DecimalField(max_digits=7, decimal_places=2)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

@@ -1,0 +1,111 @@
+{% extends 'myapp/base.html' %}
+{% load static custom_tags %}
+
+{% block title %}Manage Roster{% endblock %}
+
+{% block active_roster %}active{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2>Manage Roster</h2>
+  <p class="text-muted">Select a class to view its roster and manage grades.</p>
+</div>
+
+<!-- Class Cards Grid -->
+{% for term, term_classes in grouped_classes.items %}
+<div class="section-header">
+  <h5>{{ term.name }}</h5>
+  <span class="section-badge">{{ term_classes|length }} Classes</span>
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-5">
+  {% for class in term_classes %}
+  <div class="col">
+    <div class="class-card h-100">
+      <div class="card-accent"></div>
+      <div class="card-header-custom">
+        <div class="subject-name">{{ class.subject.name }}</div>
+        <div class="subject-code">{{ class.term.name }}</div>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="calendar-days"></i>
+          </div>
+          <div>
+            <div class="info-label">Term</div>
+            <div class="info-value">{{ class.term.name }}</div>
+            {% if class.term.start_date and class.term.end_date %}
+              <div style="font-size: 11px; margin-top: 1px; color: var(--text-muted);">
+                {{ class.term.start_date|date:"M d, Y" }} - {{ class.term.end_date|date:"M d, Y" }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="map-pin"></i>
+          </div>
+          <div>
+            <div class="info-label">Room</div>
+            <div class="info-value">
+              {% if class.room %}
+                {{ class.room.name }} <span style="font-size: 11px; color: var(--text-muted);">({{ class.room.building }}, {{ class.room.campus }})</span>
+              {% else %}
+                TBD
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="clock"></i>
+          </div>
+          <div>
+            <div class="info-label">Schedule</div>
+            <div class="info-value">{{ class.schedule|default:"TBD" }}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="users"></i>
+          </div>
+          <div>
+            <div class="info-label">Students Enrolled</div>
+            <div class="info-value">{{ class.student_count }}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i data-lucide="award"></i>
+          </div>
+          <div>
+            <div class="info-label">Credits</div>
+            <div class="info-value">{{ class.subject.credits }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer-custom">
+        <a href="{% url 'teacher_roster' class.id %}" class="btn btn-manage">
+          Manage Roster &amp; Grades
+          <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:6px"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% empty %}
+<div class="row row-cols-1 g-4 mb-5">
+  <div class="col-12">
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i data-lucide="inbox"></i>
+      </div>
+      <h5>No classes assigned yet</h5>
+      <p>You currently have no classes assigned for this term. Please contact administration if this is an error.</p>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}
